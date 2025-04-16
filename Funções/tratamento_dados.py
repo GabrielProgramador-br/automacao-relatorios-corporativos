@@ -37,7 +37,7 @@ def junta_dados(dfs: list):
 
 def limpar_dados(df):
     # Remove linhas com qualquer valor nulo
-    df.dropna(inplace=True)
+    df.dropna(how='all', inplace=True)
     
     # Remove duplicatas
     df.drop_duplicates(inplace=True)
