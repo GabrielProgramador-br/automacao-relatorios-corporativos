@@ -5,6 +5,16 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from jinja2 import FileSystemLoader, Environment
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
+import os
+import base64
+from fpdf import FPDF
+from PIL import Image
+from io import BytesIO
 
 # Configurando o estilo do seaborn
 sns.set(style="whitegrid")
@@ -92,3 +102,68 @@ render = template.render(plot_data1 = image1, plot_data2 = image2, plot_data3 = 
 
 file.write(render)
 file.close()
+
+# Lista com suas imagens base64
+imagens_base64 = [image1, image2, image3, image4, image5, image6, image7]
+
+# Criar PDF
+pdf = FPDF()
+pdf.set_auto_page_break(auto=True, margin=10)
+
+for img_b64 in imagens_base64:
+    # Decodifica base64 para imagem
+    img_bytes = base64.b64decode(img_b64.split(',')[-1])  # remove 'data:image/png;base64,...'
+    image = Image.open(BytesIO(img_bytes))
+
+    # Salva imagem temporária em disco para o FPDF ler
+    temp_path = 'temp_image.png'
+    image.save(temp_path)
+
+    # Adiciona imagem ao PDF
+    pdf.add_page()
+    pdf.image(temp_path, x=10, y=20, w=180)  # Ajuste w/h conforme o layout
+
+# Salvar PDF final
+pdf.output("Output/relatorio_graficos.pdf")
+
+print("✅ PDF gerado com sucesso!")
+
+# CONFIGURAÇÕES
+SMTP_SERVER = 'smtp.gmail.com'
+SMTP_PORT = 587
+EMAIL_REMETENTE = 'gabrielferreira192000@gmail.com'
+SENHA = 'bpmv txks vlhu hjha'  # senha de aplicativo
+EMAIL_DESTINATARIO = 'gabrielferreira192000@exemplo.com'
+
+# ARQUIVO A SER ENVIADO COMO ANEXO
+CAMINHO_ANEXO = 'Output/relatorio_graficos.pdf'
+NOME_EXIBIDO_ANEXO = os.path.basename(CAMINHO_ANEXO)
+
+# CRIAR MENSAGEM
+msg = MIMEMultipart()
+msg['From'] = EMAIL_REMETENTE
+msg['To'] = EMAIL_DESTINATARIO
+msg['Subject'] = '📎 Relatório em PDF Anexo'
+
+# CORPO DO E-MAIL
+mensagem = "Olá! Segue em anexo o relatório com os gráficos da semana. Qualquer dúvida, estou à disposição."
+msg.attach(MIMEText(mensagem, 'plain'))
+
+# ANEXAR ARQUIVO
+with open(CAMINHO_ANEXO, 'rb') as f:
+    parte = MIMEBase('application', 'octet-stream')
+    parte.set_payload(f.read())
+    encoders.encode_base64(parte)
+    parte.add_header('Content-Disposition', f'attachment; filename="{NOME_EXIBIDO_ANEXO}"')
+    msg.attach(parte)
+
+# ENVIAR
+try:
+    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+    server.starttls()
+    server.login(EMAIL_REMETENTE, SENHA)
+    server.send_message(msg)
+    server.quit()
+    print("✅ E-mail com anexo enviado com sucesso!")
+except Exception as e:
+    print(f"❌ Erro ao enviar e-mail: {e}")
