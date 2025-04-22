@@ -4,7 +4,16 @@ from Funções import funcoes_graficos
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
-from jinja2 import FileSystemLoader, Environment
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email.mime.text import MIMEText
+from email import encoders
+import os
+import base64
+from fpdf import FPDF
+from PIL import Image
+from io import BytesIO
 
 # Configurando o estilo do seaborn
 sns.set(style="whitegrid")
