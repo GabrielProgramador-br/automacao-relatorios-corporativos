@@ -1,2 +1,7 @@
 pandas
 jinja2
+matplotlib
+seaborn
+unicodedata
+base64
+io
