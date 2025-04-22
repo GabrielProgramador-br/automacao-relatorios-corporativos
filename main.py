@@ -82,13 +82,67 @@ plt.xticks(rotation=45)
 plt.tight_layout()
 image7 = funcoes_graficos.salvando_imagem(plt, "grafico7.png")
 
-loader = FileSystemLoader('Templates')
-env = Environment(loader=loader)
-template = env.get_template('template1.html')
+# Lista com suas imagens base64
+imagens_base64 = [image1, image2, image3, image4, image5, image6, image7]
 
-file = open('Output/index.html', 'w')
+# Criar PDF
+pdf = FPDF()
+pdf.set_auto_page_break(auto=True, margin=10)
 
-render = template.render(plot_data1 = image1, plot_data2 = image2, plot_data3 = image3, plot_data4 = image4, plot_data5 = image5, plot_data6 = image6, plot_data7 = image7)
+for img_b64 in imagens_base64:
+    # Decodifica base64 para imagem
+    img_bytes = base64.b64decode(img_b64.split(',')[-1])  # remove 'data:image/png;base64,...'
+    image = Image.open(BytesIO(img_bytes))
 
-file.write(render)
-file.close()
+    # Salva imagem temporária em disco para o FPDF ler
+    temp_path = 'temp_image.png'
+    image.save(temp_path)
+
+    # Adiciona imagem ao PDF
+    pdf.add_page()
+    pdf.image(temp_path, x=10, y=20, w=180)  # Ajuste w/h conforme o layout
+
+# Salvar PDF final
+pdf.output("Output/relatorio_graficos.pdf")
+
+print("✅ PDF gerado com sucesso!")
+
+# CONFIGURAÇÕES
+SMTP_SERVER = 'smtp.gmail.com'
+SMTP_PORT = 587
+EMAIL_REMETENTE = 'gabrielferreira192000@gmail.com'
+SENHA = 'bpmv txks vlhu hjha'  # senha de aplicativo
+EMAIL_DESTINATARIO = 'gabrielferreira192000@exemplo.com'
+
+# ARQUIVO A SER ENVIADO COMO ANEXO
+CAMINHO_ANEXO = 'Output/relatorio_graficos.pdf'
+NOME_EXIBIDO_ANEXO = os.path.basename(CAMINHO_ANEXO)
+
+# CRIAR MENSAGEM
+msg = MIMEMultipart()
+msg['From'] = EMAIL_REMETENTE
+msg['To'] = EMAIL_DESTINATARIO
+msg['Subject'] = '📎 Relatório em PDF Anexo'
+
+# CORPO DO E-MAIL
+mensagem = "Olá! Segue em anexo o relatório com os gráficos da semana. Qualquer dúvida, estou à disposição."
+msg.attach(MIMEText(mensagem, 'plain'))
+
+# ANEXAR ARQUIVO
+with open(CAMINHO_ANEXO, 'rb') as f:
+    parte = MIMEBase('application', 'octet-stream')
+    parte.set_payload(f.read())
+    encoders.encode_base64(parte)
+    parte.add_header('Content-Disposition', f'attachment; filename="{NOME_EXIBIDO_ANEXO}"')
+    msg.attach(parte)
+
+# ENVIAR
+try:
+    server = smtplib.SMTP(SMTP_SERVER, SMTP_PORT)
+    server.starttls()
+    server.login(EMAIL_REMETENTE, SENHA)
+    server.send_message(msg)
+    server.quit()
+    print("✅ E-mail com anexo enviado com sucesso!")
+except Exception as e:
+    print(f"❌ Erro ao enviar e-mail: {e}")
