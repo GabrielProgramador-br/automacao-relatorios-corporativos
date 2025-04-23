@@ -19,101 +19,71 @@ from io import BytesIO
 sns.set(style="whitegrid")
 plt.rcParams["figure.figsize"] = (12, 6)
 
-# Puxando os dados
-df_1_semestre, df_2_semestre = tratamento_dados.carregar_dados([r'Dados/glp-2023-01.csv', r'Dados/glp-2023-02.csv'], ';', 'ISO-8859-1')
+file_dialogues = "Dados/Hi_Bot_Whatsapp_-_Homologação_dialogos_2025-03-01_2025-03-29.xlsx"
+file_articles = "Dados/Hi_Bot_Whatsapp_-_Homologação_artigos_acessados_01-03-2025_29-03-2025.xlsx"
+file_retention = "Dados/Hi_Bot_Whatsapp_-_Homologação_retencao_01-03-2025_29-03-2025.xlsx"
 
-# Concatenando os dados
-df = tratamento_dados.junta_dados([df_1_semestre, df_2_semestre])
+df_dialogues = pd.read_excel(file_dialogues)
+df_articles = pd.read_excel(file_articles)
+df_retention = pd.read_excel(file_retention)
 
-# limpando os dados
-#df = tratamento_dados.limpar_dados(df)
-print(df.columns)
+df_dialogues["Data"] = pd.to_datetime(df_dialogues["Data"])
+df_dialogues = df_dialogues.sort_values(by="Data")
+df_dialogues["month"] = df_dialogues["Data"].apply(lambda x: str(x.year) + "-" + str(x.month))
 
-# Convertendo os tipos de dados
-df = tratamento_dados.converter_para_datetime(df, 'DATA DA COLETA')
-df = tratamento_dados.converter_para_valor(df, 'VALOR DE VENDA')
+df_articles["Data"] = pd.to_datetime(df_articles["Data"])
+df_articles = df_articles.sort_values(by="Data")
+df_articles["month"] = df_articles["Data"].apply(lambda x: str(x.year) + "-" + str(x.month))
 
-# 1. Evolução do preço médio diário
-preco_diario = df.groupby("DATA DA COLETA")["VALOR DE VENDA"].mean()
-preco_diario.plot(marker='o', title="Preço Médio Diário do GLP - Janeiro 2023")
-plt.ylabel("Valor de Venda (R$)")
-plt.grid(True)
-plt.tight_layout()
-image1 = funcoes_graficos.salvando_imagem(plt, "grafico1.png")
+df_retention["Data"] = pd.to_datetime(df_retention["Data"])
+df_retention = df_retention.sort_values(by="Data")
+df_retention["month"] = df_retention["Data"].apply(lambda x: str(x.year) + "-" + str(x.month))
 
-# 2. Preço médio por estado
-preco_estado = df.groupby("ESTADO - SIGLA")["VALOR DE VENDA"].mean().sort_values()
-preco_estado.plot(kind='bar', color='skyblue', title="Preço Médio do GLP por Estado - Janeiro 2023")
-plt.ylabel("Valor de Venda (R$)")
-plt.xticks(rotation=45)
-plt.tight_layout()
-image2 = funcoes_graficos.salvando_imagem(plt, "grafico2.png")
+image1, explicacao1 = funcoes_graficos.plot_chatbot_efficiency(df_dialogues)
+image2, explicacao2 = funcoes_graficos.plot_article_popularity(df_articles)
+image3, explicacao3 = funcoes_graficos.plot_retention_correlation(df_retention)
+image4, explicacao4 = funcoes_graficos.plot_peak_hours(df_dialogues)
+image5, explicacao5 = funcoes_graficos.plot_top_questions(df_dialogues)
+image6, explicacao6 = funcoes_graficos.plot_avg_conversation_time(df_dialogues)
 
-# 3. Distribuição dos preços
-sns.histplot(df["VALOR DE VENDA"].dropna(), bins=40, kde=True, color='green')
-plt.title("Distribuição dos Valores de Venda do GLP")
-plt.xlabel("Valor de Venda (R$)")
-plt.tight_layout()
-image3 = funcoes_graficos.salvando_imagem(plt, "grafico3.png")
 
-# 4. Boxplot por estado
-plt.figure(figsize=(16, 6))
-sns.boxplot(data=df, x="ESTADO - SIGLA", y="VALOR DE VENDA")
-plt.title("Distribuição de Preços do GLP por Estado")
-plt.xticks(rotation=45)
-plt.tight_layout()
-image4 = funcoes_graficos.salvando_imagem(plt, "grafico4.png")
-
-# 5. Top 10 municípios com maior e menor preço médio
-preco_municipio = df.groupby("MUNICIPIO")["VALOR DE VENDA"].mean()
-top10_maior = preco_municipio.sort_values(ascending=False).head(10)
-top10_menor = preco_municipio.sort_values().head(10)
-
-# Maiores
-top10_maior.plot(kind="bar", color="red", title="Top 10 Municípios com Maior Preço Médio de GLP")
-plt.ylabel("Valor de Venda (R$)")
-plt.xticks(rotation=45)
-plt.tight_layout()
-image5 = funcoes_graficos.salvando_imagem(plt, "grafico5.png")
-
-# Menores
-top10_menor.plot(kind="bar", color="blue", title="Top 10 Municípios com Menor Preço Médio de GLP")
-plt.ylabel("Valor de Venda (R$)")
-plt.xticks(rotation=45)
-plt.tight_layout()
-image6 = funcoes_graficos.salvando_imagem(plt, "grafico6.png")
-
-# 6. Preço médio por bandeira (Top 10)
-preco_bandeira = df.groupby("BANDEIRA")["VALOR DE VENDA"].mean().sort_values(ascending=False).head(10)
-preco_bandeira.plot(kind="bar", color="purple", title="Preço Médio do GLP por Bandeira (Top 10)")
-plt.ylabel("Valor de Venda (R$)")
-plt.xticks(rotation=45)
-plt.tight_layout()
-image7 = funcoes_graficos.salvando_imagem(plt, "grafico7.png")
-
-# Lista com suas imagens base64
-imagens_base64 = [image1, image2, image3, image4, image5, image6, image7]
+# Lista com suas imagens e explicações
+imagens_base64 = [image1, image2, image3, image4, image5, image6]
+explicacoes = [explicacao1, explicacao2, explicacao3, explicacao4, explicacao5, explicacao6]
 
 # Criar PDF
 pdf = FPDF()
-pdf.set_auto_page_break(auto=True, margin=10)
+pdf.set_auto_page_break(auto=True, margin=15)
+pdf.set_font("Arial", size=12)
 
-for img_b64 in imagens_base64:
+for idx, (img_b64, explicacao) in enumerate(zip(imagens_base64, explicacoes), start=1):
     # Decodifica base64 para imagem
-    img_bytes = base64.b64decode(img_b64.split(',')[-1])  # remove 'data:image/png;base64,...'
+    img_bytes = base64.b64decode(img_b64.split(',')[-1])
     image = Image.open(BytesIO(img_bytes))
 
-    # Salva imagem temporária em disco para o FPDF ler
-    temp_path = 'temp_image.png'
+    # Salva imagem temporária com nome único
+    temp_path = f'temp_image_{idx}.png'
     image.save(temp_path)
 
-    # Adiciona imagem ao PDF
+    # Adiciona nova página e insere imagem
     pdf.add_page()
-    pdf.image(temp_path, x=10, y=20, w=180)  # Ajuste w/h conforme o layout
+
+    # Define largura e calcula altura proporcional
+    img_width = 180
+    image = Image.open(BytesIO(img_bytes))
+    aspect = image.height / image.width
+    img_height = img_width * aspect
+
+    # Insere imagem
+    pdf.image(temp_path, x=10, y=20, w=img_width, h=img_height)
+
+    # Move cursor para logo abaixo da imagem
+    pdf.set_xy(10, 20 + img_height + 5)
+    pdf.multi_cell(190, 8, explicacao, align='L')
 
 # Salvar PDF final
-pdf.output("Output/relatorio_graficos.pdf")
-
+output_path = "Output/relatorio_graficos.pdf"
+pdf.output(output_path)
 print("✅ PDF gerado com sucesso!")
 
 # CONFIGURAÇÕES
@@ -155,3 +125,9 @@ try:
     print("✅ E-mail com anexo enviado com sucesso!")
 except Exception as e:
     print(f"❌ Erro ao enviar e-mail: {e}")
+
+# Após salvar o PDF
+for idx in range(1, len(imagens_base64) + 1):
+    temp_path = f'temp_image_{idx}.png'
+    if os.path.exists(temp_path):
+        os.remove(temp_path)

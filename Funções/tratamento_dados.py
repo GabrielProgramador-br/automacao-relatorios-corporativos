@@ -4,7 +4,7 @@ import unicodedata
 def carregar_dados(caminhos_arquivos, separador, codificacao):
     dataframes = []
     for caminho_arquivo in caminhos_arquivos:
-        df = pd.read_csv(caminho_arquivo, sep=separador, encoding=codificacao)
+        df = pd.read_csv(caminho_arquivo, sep=separador, encoding=codificacao, header=0)
         dataframes.append(df)
         df.columns = [
         unicodedata.normalize("NFKD", col)
@@ -48,8 +48,17 @@ def converter_para_datetime(df, colunas):
     df[colunas] = pd.to_datetime(df[colunas], infer_datetime_format=True, dayfirst=True, errors='coerce')
     return df
 
-def converter_para_valor(df, colunas):
-    df[colunas] = df[colunas].str.replace('.', '', regex=False).str.replace(',', '.', regex=False).astype(float)
+def converter_para_valor(df, coluna):
+    if coluna in df.columns:
+        df[coluna] = (
+            df[coluna]
+            .astype(str)
+            .str.replace('.', '', regex=False)
+            .str.replace(',', '.', regex=False)
+        )
+        df[coluna] = pd.to_numeric(df[coluna], errors='coerce')  # mais seguro que astype(float)
+    else:
+        print(f"Coluna '{coluna}' não encontrada no DataFrame.")
     return df
 
 def converter_para_int(df, colunas):
